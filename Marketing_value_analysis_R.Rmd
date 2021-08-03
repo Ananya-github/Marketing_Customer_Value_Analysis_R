@@ -1,0 +1,528 @@
+---
+title: "CUSTOMER LIFETIME VALUE"
+output:
+  html_notebook: default
+  html_document: default
+---
+<h2>PROBLEM STATEMENT:</h2>
+
+*Customer Lifetime Value (CLV)* is a measure of a customer's total worth to a business over the entire period of the customer-business relationship. The main objective of this project is to predict the lifetime valuation of a customer to facilitate target marketing. Not all customers are equal. Indeed, someone who purchases an inexpensive policy is going to be less valuable to your business than someone who purchases an expensive one, and your longtime customers will bring in more money than those who buy a one-year policy and do not renew. Here we need to predict the customer lifetime value for each customer to make sure how much benefit each customer can repay to the company in exchange for the benefits he/she receives. CLV is an important figure to know as it helps a company to make decisions about how much money to invest in acquiring new customers and retaining existing ones.
+
+
+With the given information regarding the customers, we can predict which bidding strategies will yield the highest lifetime revenues for the least amount of money through data analysis and exploration and predict the CLV of a given customer. Thus optimizing our resources in the best possible way.
+Using Watson Analytics data, we can predict customer behavior to retain customers. We can analyze all relevant customer data and develop focused customer retention programs.
+
+
+The question that we are trying to solve Discover what affects customer engagement and provide actionable recommendations for the business
+*Business strategy should be to * Acquire more customers + to retain more customers = To increase customer profitability. We want to optimize
+Watson Analytics data The given data set consists of 9134 observations of 24 variables. There are no null values or duplicated rows in the data set. The 'Customer Lifetime Value' variable is our target variable.
+Here, we know outlier as something that happens in rare cases and is not common. But based on our dataset, these may be important customers. So, we will avoid doing any kind of outlier treatment.
+
+
+Even if we do the transformation of continuous variables, problematic
+Luxury cars, Luxury SUV owning people have high customer lifetime value in general. The average customer lifetime value of the customer who stays in a different location code is the same so while creating the model we can drop this. The average customer lifetime value of the customer who stays in a different state is the same and we can drop this also. The average customer lifetime value for response is the same. We can see that the average customer lifetime value is the same for both males and females.
+We can see a pattern here, customers who have taken only 1 policy have lower customer lifetime value, and customers who have taken 3 or greater show a similar trend, so we can combine all of them into one bin, and we can also see that the customers who have taken 2 policies have very high customer lifetime value comparatively.
+
+
+The number of open complaints also show kind of similar trend, where people who have complaints 2 or lesser have a similar pattern but whereas >3 do not show any pattern we will have to do a statistical test to understand if this feature is significant or not
+We can see that there is a linear relationship between Customer lifetime value and monthly premium auto, but we do not see any relationship between income and the total claim amount.
+
+
+And we can see in the correlation map, that customer lifetime value has a better correlation with monthly premium auto and acceptable co-relation with total claim amount, but it show's no relationship with income, so again with all the visualization's we can conclude that we can disregard the INCOME feature.
+Modelling H0: Feature is not significant Ha: Feature is significant
+Assumptions Linearity We don't see any linear relationship between the variables and the Y variable, which fails the first assumption of linear regression.
+Mean Of Residuals The 2nd assumption is that the mean of the residuals must be close to zero, which again fails.
+
+
+Homoscedasticity_test H0: Error terms are homoscedastic Ha: Error terms are not homoscedastic p-value < 0.05 fail to prove the null hypothesis, error terms are not homoscedastic
+
+
+Test of normality of residuals The distribution clearly show's that the residuals are not normally distributed, and the third assumption also fails.
+No Autocorrelation Ho: Autocorrelation is absent
+Ha: Autocorrelation is present
+
+The P-value is >0.05, we fail to reject the null hypothesis, autocorrelation is absent.
+NO MULTI COLLINEARITY
+
+
+Again modeling- Dropping variables
+
+
+Forward selection
+
+```{r include=FALSE}
+#install.packages("dplyr")
+library(dplyr)
+#install.packages("tidyverse")
+library(tidyverse)
+#install.packages("ggplot2")
+library(ggplot2)
+#install.packages("lubridate")#To standardise the date column consisting of different formats
+library(lubridate)
+#install.packages("plotly")
+library(plotly)
+library(gridExtra)
+#install.packages("lattice")
+library(lattice)
+#install.packages("repr")
+library(repr)
+#install.packages("corrplot")
+library(corrplot)
+#install.packages("HMM")
+library(HMM)
+#install.packages("DT")
+library(DT)
+#install.packages(("stringi"))
+library(stringi)
+#install.packages("naniar")
+library(naniar)
+#install.packages("skimr")
+library(skimr)
+#install.packages("reshape2")
+library(reshape2)
+#install.packages("funModeling")
+library(funModeling)
+
+```
+
+```{r}
+data <- read_csv("Marketing-Customer-Value-Analysis.csv")
+#View(data)
+data$`Effective To Date`<-mdy(data$`Effective To Date`)
+# Converting character variables into Factor variables
+data$State <- as.factor(data$State)
+data$Response <- as.factor(data$Response)
+data$Coverage <- as.factor(data$Coverage)
+data$Education <- as.factor(data$Education)
+data$EmploymentStatus <- as.factor(data$EmploymentStatus)
+data$Gender <- as.factor(data$Gender)
+data$`Location Code`  <- as.factor(data$`Location Code` )
+data$`Marital Status`  <- as.factor(data$`Marital Status`)
+data$`Policy Type` <- as.factor(data$`Policy Type`)
+data$`Renew Offer Type`<- as.factor(data$`Renew Offer Type`)
+data$Policy  <- as.factor(data$Policy)
+data$`Sales Channel`  <- as.factor(data$`Sales Channel`)
+data$`Vehicle Class`  <- as.factor(data$`Vehicle Class`)
+data$`Vehicle Size`  <- as.factor(data$`Vehicle Size`)
+
+
+# Converting two numerical variables as factors
+data$`Number of Open Complaints` <- as.factor(data$`Number of Open Complaints`)
+data$`Number of Policies`<- as.factor(data$`Number of Policies`)
+#dim(data)
+#str(data)
+#summary(data)
+#continuous variables
+num_data= data.frame(data$`Customer Lifetime Value`,data$Income,data$`Monthly Premium Auto`,data$`Months Since Last Claim`,data$`Months Since Policy Inception`,data$`Number of Open Complaints`,data$`Number of Policies`,data$`Total Claim Amount`)
+#Target variable
+#summary(data$`Customer Lifetime Value`)
+#std<-sd(data$`Customer Lifetime Value`)
+#sprintf("The standard deviation of CLV: %f",std)
+#variance<-var(data$`Customer Lifetime Value`)
+#sprintf("The variance of CLV: %f",variance)
+fig_CLV <- plot_ly(x =data$`Customer Lifetime Value`, type = "histogram")
+#fig_CLV
+
+#Outliers
+num_outliers= data.frame(data$`Monthly Premium Auto`,data$`Total Claim Amount`,data$`Customer Lifetime Value`)
+#View(num_outliers)
+#colnames(num_outliers)
+
+
+
+p1 <- ggplot(data = data, aes(x=' ', y=`Monthly Premium Auto`)) + 
+        
+        geom_point(aes(color= `Monthly Premium Auto`), alpha=0.2, position='jitter') + 
+        geom_boxplot(outlier.size=5, alpha=0.1)
+#plot(p1)
+
+
+
+p2 <- ggplot(data = data, aes(x=' ', y=`Total Claim Amount`)) + 
+        
+        geom_point(aes(color= `Total Claim Amount`), alpha=0.2, position='jitter') + 
+        geom_boxplot(outlier.size=5, alpha=0.1)
+#plot(p2)
+
+p3 <- ggplot(data = data, aes(x=' ', y=`Customer Lifetime Value`)) + 
+        
+        geom_point(aes(color=`Customer Lifetime Value` ), alpha=0.2, position='jitter') + 
+        geom_boxplot(outlier.size=5, alpha=0.1)
+#plot(p3)
+
+#grid.arrange(p1, p2,p3, ncol = 2,nrow=2, widths = c(10, 10))
+```
+```{r warning= FALSE}
+gg_miss_var(data)
+
+```
+We have no missing or duplicate values in data so we don't need to do any missing value treatment.
+
+We are also converting the variables of character type to factors
+
+
+```{r}
+zero_values<-data.frame(data$`Months Since Last Claim`, data$`Number of Open Complaints`, data$`Months Since Policy Inception`,data$Income)
+status(zero_values)
+
+```
+It is found that 2317 customers have zero income.
+
+
+
+```{r}
+profiling_num(data)
+
+```
+Skewness and kurtosis Customer.Lifetime.Value,Total.Claim.Amount have high kurtosis which means Number.of.Open.Complaints, Monthly.Premium.Auto
+
+After observing percentiles, max and min of columns we can say that there is not a major sudden difference for any column value,which prevents us to do outlier treatment .
+
+
+<h2>EXPLORATORY DATA ANALYSIS </h2>
+
+Our objective here is to visualize the given data and look for variable that should be focused or improved through modelling.
+
+TARGET VARIABLE-
+
+```{r warning=FALSE}
+#CLV
+
+fig_CLV <- plot_ly(x =data$`Customer Lifetime Value`, type = "histogram")%>% layout(title =" CLV DISTRIBUTION IN THE DATA")
+fig_CLV
+
+
+#fig_CLV1 <- plot_ly(x =log10(data$`Customer Lifetime Value`), type = "histogram")%>% layout(title =" CLV DISTRIBUTION AFTER LOG TRANSFORMATION")
+#fig_CLV1
+
+
+
+```
+Customer lifetime value is positively skewed,so we need to do log transformation to satisfy the assumptions of linear regression
+
+<h2>RESPONSE</h2>
+
+```{r}
+#aggregate(Customer ~ `Sales Channel`,data, FUN = length)
+
+ggplot(data,aes(Response))+geom_bar(fill="pink",col="black",width=0.7,position=position_dodge(0.9))+
+    geom_text(stat="count",aes(label = after_stat(count)),vjust=2)+
+    theme(
+        text=element_text(size=10),
+        axis.title.x = element_text(color="black", size=15),
+        axis.title.y = element_text(color="black", size=15)
+    )
+
+
+```
+```{r}
+stripplot(~`Customer Lifetime Value`|Response,data,
+  panel=function(x,y,...) {
+     m=median(x)
+     panel.stripplot(x,y,...)
+     panel.stripplot(m,y,pch="|",cex=2,col=2)
+  }
+)
+```
+```{r}
+ggplot(data, aes(x =Response, y = `Customer Lifetime Value`)) +
+  geom_boxplot() + 
+  xlab("Response of customers") + ylab("CLV")
+```
+Here, we can observe that very few people have reapplied for policy. So, if our focus is to retain customers we should make sure that those people who said no we need to target them to continue as customers. Those customers who have said no are high customer value.
+
+<h2>COVERAGE</h2>
+
+```{r}
+ggplot(data,aes(Coverage))+geom_bar(fill="yellow",col="black",width=0.7,position=position_dodge(0.9))+
+    geom_text(stat="count",aes(label = after_stat(count)),vjust=2)+
+    theme(
+        text=element_text(size=10),
+        axis.title.x = element_text(color="black", size=15),
+        axis.title.y = element_text(color="black", size=15)
+    )
+
+
+```
+```{r}
+stripplot(~`Customer Lifetime Value`|Coverage,data,
+  panel=function(x,y,...) {
+     m=median(x)
+     panel.stripplot(x,y,...)
+     panel.stripplot(m,y,pch="|",cex=2,col=2)
+  }
+)
+```
+```{r}
+ggplot(data, aes(x =Coverage, y = `Customer Lifetime Value`)) +
+  geom_boxplot() + 
+  xlab("Response of customers") + ylab("CLV")
+```
+```{r}
+aggregate( `Customer Lifetime Value` ~ Coverage, data, mean)
+```
+This can be an important variable, as different groups show major differences in their value, and which kind of coverage they are choosing may help in deciding their customer life time value.
+
+
+<h2>STATE</H2>
+
+```{r}
+ggplot(data, aes(x =State, y = `Customer Lifetime Value`)) +
+  geom_boxplot() + 
+  xlab("State") + ylab("CLV")
+```
+All states have approximately same values.
+
+<h2>EDUCATION</h2>
+
+```{r}
+ggplot(data,aes(Education))+geom_bar(fill="yellow",col="black",width=0.7,position=position_dodge(0.9))+
+    geom_text(stat="count",aes(label = after_stat(count)),vjust=2)+
+    theme(
+        text=element_text(size=10),
+        axis.title.x = element_text(color="black", size=15),
+        axis.title.y = element_text(color="black", size=15)
+    )
+
+```
+
+```{r}
+stripplot(~`Customer Lifetime Value`|Education,data,
+  panel=function(x,y,...) {
+     m=median(x)
+     panel.stripplot(x,y,...)
+     panel.stripplot(m,y,pch="|",cex=2,col=2)
+  }
+)
+
+
+
+```
+```{r}
+ggplot(data, aes(x =Education, y = `Customer Lifetime Value`)) +
+  geom_boxplot() + 
+  xlab("Response of customers") + ylab("CLV")
+```
+Doctor in general have low customer life time value, while Masters and High School or Below have higher customer life time value. But it's still tough to observe any major changes across different groups. So, it may be possible that this variable is not important.
+
+<h2>EMPLOYMENT STATUS</h2>
+
+```{r}
+
+ggplot(data,aes(EmploymentStatus))+geom_bar(fill="yellow",col="black",width=0.7,position=position_dodge(0.9))+
+    geom_text(stat="count",aes(label = after_stat(count)),vjust=2)+
+    theme(
+        text=element_text(size=10),
+        axis.title.x = element_text(color="black", size=15),
+        axis.title.y = element_text(color="black", size=15)
+    )
+
+```
+
+```{r}
+stripplot(~`Customer Lifetime Value`|EmploymentStatus,data,
+  panel=function(x,y,...) {
+     m=median(x)
+     panel.stripplot(x,y,...)
+     panel.stripplot(m,y,pch="|",cex=2,col=2)
+  }
+)
+
+```
+
+```{r}
+ggplot(data, aes(x =EmploymentStatus, y = `Customer Lifetime Value`)) +
+  geom_boxplot() + 
+  xlab("Response of customers") + ylab("CLV")
+
+```
+Customer with high customer lifetime values lies mainly in Employed and unemployed categories, while it appears that there isn't any major different across categories. Also, we can say that people who are Retired, on Medical leave, Disabled their customer lifetime value is less. Employed people's customer lifetime value definitely turns out to be highest among all. There is one data point in disabled which can be treated as outlier as it's value is really high, which doesn't make it a general case. So, we remove that data point.
+
+<h2>GENDER</h2>
+
+```{r}
+ggplot(data,aes(Gender))+geom_bar(fill="yellow",col="black",width=0.7,position=position_dodge(0.9))+
+    geom_text(stat="count",aes(label = after_stat(count)),vjust=2)+
+    theme(
+        text=element_text(size=10),
+        axis.title.x = element_text(color="black", size=15),
+        axis.title.y = element_text(color="black", size=15)
+    )
+
+
+
+```
+
+```{r}
+stripplot(~`Customer Lifetime Value`|Gender,data,
+  panel=function(x,y,...) {
+     m=median(x)
+     panel.stripplot(x,y,...)
+     panel.stripplot(m,y,pch="|",cex=2,col=2)
+  }
+)
+
+```
+
+```{r}
+ggplot(data, aes(x =Gender, y = `Customer Lifetime Value`)) +
+  geom_boxplot() + 
+  xlab("Response of customers") + ylab("CLV")
+
+
+```
+It appears that gender has no effect on customer lifetime value, but when combined with response variable we observe that female customers are the ones whose response is yes so we should focus more on them
+
+<h2>LOCATION CODE</h2>
+```{r}
+
+
+
+ggplot(data,aes(`Location Code`))+geom_bar(fill="yellow",col="black",width=0.7,position=position_dodge(0.9))+
+    geom_text(stat="count",aes(label = after_stat(count)),vjust=2)+
+    theme(
+        text=element_text(size=10),
+        axis.title.x = element_text(color="black", size=15),
+        axis.title.y = element_text(color="black", size=15)
+    )
+```
+```{r}
+stripplot(~`Customer Lifetime Value`|`Location Code`,data,
+  panel=function(x,y,...) {
+     m=median(x)
+     panel.stripplot(x,y,...)
+     panel.stripplot(m,y,pch="|",cex=2,col=2)
+  }
+)
+```
+
+```{r}
+ggplot(data, aes(x =`Location Code`, y = `Customer Lifetime Value`)) +
+  geom_boxplot() + 
+  xlab("Response of customers") + ylab("CLV")
+
+
+
+```
+```{r}
+aggregate( `Customer Lifetime Value` ~ `Location Code`, data, mean)
+```
+We should focus more on suburbans. as they are our major customers We can't say if there is any major difference between these groups.
+
+
+<h2>MARITAL STATUS</h2>
+```{r}
+
+ggplot(data, aes(x =`Marital Status`, y = `Customer Lifetime Value`)) +
+  geom_boxplot() + 
+  xlab("Response of customers") + ylab("CLV")
+
+
+
+```
+```{r}
+aggregate( `Customer Lifetime Value` ~ `Marital Status`, data, mean)
+```
+There isn't much difference across categories of Marital Status. This may not be an important variable
+
+<h2>VEHICLE CLASS</h2>
+
+```{r}
+ggplot(data, aes(x =`Vehicle Class`, y = `Customer Lifetime Value`)) +
+  geom_boxplot() + 
+  xlab("Response of customers") + ylab("CLV")
+```
+
+```{r}
+aggregate( `Customer Lifetime Value` ~ `Vehicle Class`, data, mean)
+
+```
+Luxury Car,Luxury SUV have high customer lifetime value, while Four-Door Car and Two-Door Car have less customer lifetime values. So, this variable may be important for prediction as it varies across different categories.
+
+
+<h2>VEHICLE SIZE</h2>
+
+
+```{r}
+
+ggplot(data, aes(x =`Vehicle Size`, y = `Customer Lifetime Value`)) +
+  geom_boxplot() + 
+  xlab("Response of customers") + ylab("CLV")
+
+
+```
+
+This variable doesn't show major difference, so it may not contribute much.
+
+
+
+```{r}
+#install.packages("RColorBrewer")
+library(RColorBrewer)
+
+CLV_Type <- ggplot(data, aes(x=`Number of Policies`, y=`Customer Lifetime Value`, fill = `Sales Channel` ))+
+        geom_col(position="dodge") + xlab("NUMBER OF POLICIES") + ylab("Customer Lifetime Value") +
+        ggtitle("Customer Lifetime Value by Sales Channel and Policy") +
+         scale_fill_brewer(palette = "Paired")
+CLV_Type
+
+
+```
+The Average number of policies that the Company issues comes to be around 2-3 in the the given time frame and it is noticeable that Call Centers fetch the most valuable customer.It is also to be noted that Customers having higher number of policies directly approach the Branch.Here the Policies to be issued vs the Lifetime Value of a Customer could be a trade off, since our focus is Lifetime Value we should be focusing on attracting more customers through Call centers.
+
+```{r}
+Claim_Type <- ggplot(data, aes(x=`Number of Policies`, y=data$`Total Claim Amount`, fill =`Policy Type` ))+
+        geom_col(position="dodge") + xlab("NUMBER OF POLICIES") + ylab("Total Claim Amt") +
+        ggtitle("Total Claim by no.of policy and Policy type") +
+         scale_fill_brewer(palette = "Paired")
+Claim_Type
+```
+It is evident that our major share of Customers procure Personal insurance and since the Total Claim Value determines the Lifetime Value of a customer the No.of Policy sold per category plays a crucial role to generate value to the company.
+
+```{r}
+loc<-count(data,`Location Code`,Coverage)
+#View(loc)
+
+
+ggplot(data = data, aes(x = `Location Code` , y =`Monthly Premium Auto` , color = Coverage)) +
+  geom_boxplot() + 
+  xlab("Location") + ylab("Monthly Premium")
+
+```
+This to strategize the Plan to be promoted in different Locations, since we know most of our Customers come from Sub-Urban locations, where the Premium coverage numbers are high it is also seen that Premium coverage is preferred by most irrespective of the location.Hence prioritizing Premium Customers can benefit the business.
+
+```{r}
+CLVg_Type <- ggplot(data, aes(x=`Number of Policies`, y=`Customer Lifetime Value`, fill = Gender ))+
+        geom_col(position="dodge",stat='identity') + xlab("NUMBER OF POLICIES") + ylab("Customer Lifetime Value") +
+        ggtitle("Customer Lifetime Value by Gender and Policy") +
+         scale_fill_brewer(palette = "Paired")
+
+CLVg_Type
+```
+
+The data has a clear balance with respect to Gender variable yet the High Lifetime Value customers are found to be Males.But Females are most likely to procure more no.of policies.
+
+```{r fig.align="center", echo = FALSE,fig.width = 14}
+
+complaint_count<-count(data,`Policy Type`,`Number of Open Complaints`,`Sales Channel`)
+#complaint_count
+ggplot(data = complaint_count, aes(x = `Policy Type` , y = n,color=`Number of Open Complaints` )) +scale_fill_brewer("Paired")+
+  geom_col(position="dodge") + 
+   facet_grid(`Sales Channel`~ . )+
+   geom_text(aes(label = n), vjust = -0.2, size = 6,
+            position = position_dodge(0.9))+
+  xlab("Policy Type") + ylab("No.of Open Complaints")
+```
+
+No.of Complaints can reflect upon relationship of the Customer with the Company given that the services are not managed well by the company.Most of our policies are for Personal purpose and are marketed by Call-Center.Personal policies being our focal point we see that those policies distributed by Agents have major number of Complaints which indicates poor-job  by the Agents and delayed response by the company to the Target customers.
+
+
+
+
+
+
+
+
+
+
+
