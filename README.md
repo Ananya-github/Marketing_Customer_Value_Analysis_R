@@ -1,0 +1,9 @@
+# Marketing_Customer_Value_Analysis_R
+
+Customer Lifetime Value (CLV) is a measure of a customer’s total worth to a business over the entire period of the customer-business relationship. The main objective of this project is to predict the lifetime valuation of a customer to facilitate target marketing. Not all customers are equal. Indeed, someone who purchases an inexpensive policy is going to be less valuable to your business than someone who purchases an expensive one, and your longtime customers will bring in more money than those who buy a one-year policy and do not renew. Here we need to predict the customer lifetime value for each customer to make sure how much benefit each customer can repay to the company in exchange for the benefits he/she receives. CLV is an important figure to know as it helps a company to make decisions about how much money to invest in acquiring new customers and retaining existing ones.
+
+With the given information regarding the customers, we can predict which bidding strategies will yield the highest lifetime revenues for the least amount of money through data analysis and exploration and predict the CLV of a given customer.
+
+Using Watson Analytics data, we can predict customer behavior to retain customers. We can analyze all relevant customer data and develop focused customer retention programs.The question that we are trying to solve is to discover what affects customer engagement and to provide actionable recommendations for the businessBusiness strategy should be to Acquire more customers + to retain more customers = To increase customer profitability.
+
+In this project, We have tried to find the effect of different variables on the target variable through visualizations, statistical tests and statistical models and compared the results.
